@@ -1,0 +1,114 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Non-Prod
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches:
+      - '*'         # matches every branch that doesn't contain a '/'
+      - '*/*'       # matches every branch containing a single '/'
+      - '**'        # matches every branch
+      - '!master'   # excludes master
+  pull_request:
+    branches:
+      - '*'         # matches every branch that doesn't contain a '/'
+      - '*/*'       # matches every branch containing a single '/'
+      - '**'        # matches every branch
+      - '!master'   # excludes master
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a job to manage VDB and SelfService container life-cycle
+  manage_vdbs:
+    environment:
+      name: delphix-engine
+    env:
+      APP_PREFIX: ${{ secrets.APP_PREFIX }}
+      DELPHIX_TARGET_CDB: ${{ secrets.DELPHIX_TARGET_CDB }}
+      DELPHIX_TARGET_ENVIRONMENT: ${{ secrets.DELPHIX_TARGET_ENVIRONMENT }}
+      DELPHIX_TARGET_INSTANCE: ${{ secrets.DELPHIX_TARGET_INSTANCE }} 
+      DELPHIX_VDB_GROUP: ${{ secrets.DELPHIX_VDB_GROUP }}
+      DELPHIX_CONTAINER_OWNER: ${{ secrets.DELPHIX_CONTAINER_OWNER }}
+      DXTOOLS_CONF: ${{ secrets.DXTOOLS_CONF }}
+      DELPHIX_DSOURCE_LIST: ${{ secrets.DELPHIX_DSOURCE_LIST }}
+      CI_ROLLBACK: ${{ secrets.CI_ROLLBACK }}
+      GITHUB_REF: ${{ env.GITHUB_REF }}
+      GITHUB_RUN_ID: ${{ env.GITHUB_RUN_ID }}
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    container: delphix/dxtoolkit:latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: Set dxtools.conf
+        run: |
+          mkdir /config
+          echo $DXTOOLS_CONF | base64 -d > /config/dxtools.conf
+
+      - name: Test connection to Delphix
+        run: |
+          dx_get_users > /dev/null
+
+      - name: Create VDB and Self Service Container
+        run: |
+          APP_PREFIX_UPPER=${APP_PREFIX^^}
+          TEMP=$(echo ${GITHUB_REF} | rev | cut -d/ -f1 | rev | sed 's/-/_/g')
+          VDB_NAME=v$(echo ${TEMP:0:7}) 
+          DELPHIX_DSOURCE_GROUP=$(echo ${DELPHIX_DSOURCE_LIST} | cut -d : -f 1)
+          DELPHIX_DSOURCE_NAME=$(echo ${DELPHIX_DSOURCE_LIST} | cut -d : -f 2)
+          
+          # If there isn't an Environment Variable with DELPHIX_DSOURCE_LIST, then get search Master from JetStream (SelfService) DataSources
+          [ -z "$DELPHIX_DSOURCE_NAME" ] && DELPHIX_DSOURCE_NAME=$( dx_get_js_datasources -format csv | \
+          grep -v 'N/A' | grep $APP_PREFIX_UPPER | cut -d, -f4 | cut -d\/  -f2|awk '{$1=$1};1')
+          echo "Creating Environment from dSource: $DELPHIX_DSOURCE_NAME"
+          
+          # Create a new VDB for the Git Branch
+          # The group "${APP_PREFIX_UPPER}-VDBS" must be previously created on Delphix admin page, or it will fail
+          if  ! ( dx_get_db_env -name $VDB_NAME -group DELPHIX_VDB_GROUP -type vdb > /dev/null ); then
+            echo "Creating database $VDB_NAME"
+            dx_provision_vdb -type oracle -srcgroup ${DELPHIX_DSOURCE_GROUP} -sourcename ${DELPHIX_DSOURCE_NAME} \
+            -group ${DELPHIX_VDB_GROUP} -targetname ${VDB_NAME} -dbname ${VDB_NAME} \
+            -environment ${DELPHIX_TARGET_ENVIRONMENT} -envinst ${DELPHIX_TARGET_INSTANCE} \
+            -cdb ${DELPHIX_TARGET_CDB}
+          else 
+            echo "VDB Already exists"; 
+          fi
+
+          # Creates a new Container on SelfService, with the VDB we created earlier. 
+          # And create a (Delphix container's) "branch", naming it after Github's GITHUB_REF
+          if ! ( dx_get_js_containers -container_name ${GITHUB_REF} > /dev/null); then
+            echo "Creating container ${GITHUB_REF} for VDB $VDB_NAME"
+             dx_ctl_js_container -action create -container_name ${GITHUB_REF} -container_def ${APP_PREFIX_UPPER},${VDB_NAME} -container_owner ${DELPHIX_CONTAINER_OWNER} -template_name $APP_PREFIX_UPPER
+            echo "Creating branch ${GITHUB_REF}"
+             dx_ctl_js_branch -action create -container_name${GITHUB_REF} -branch_name ${GITHUB_REF}
+          else
+            echo "Container already exists."
+             dx_ctl_js_container -action enable -container_name ${GITHUB_REF} || echo "Container is online"
+          fi
+
+          # Create a bookmark for current GITHUB_RUN_ID - if it doesn't exist, then create it
+          if ! ( dx_get_js_bookmarks -template_name ${APP_PREFIX_UPPER} -container_name $GITHUB_REF -bookmark_name $GITHUB_RUN_ID > /dev/null); then
+             dx_ctl_js_bookmarks -action create -container_name $GITHUB_REF -bookmark_name $GITHUB_RUN_ID -template_name ${APP_PREFIX_UPPER} -bookmark_time latest
+          else
+            echo "Current commit already bookmarked"
+            if [[ "$CI_ROLLBACK" == "true" ]]; then 
+          	echo "CI_ROLLBACK environment variable is true, rolling back to bookmark $GITHUB_RUN_ID"
+                  dx_ctl_js_container -action restore -timestamp $GITHUB_RUN_ID -container_name $GITHUB_REF
+            else 
+          	echo "CI_ROLLBACK environment variable is false, nothing to do."
+            fi
+          fi
+          echo "Database provisioning finished:"
+          echo "Database: $VDB_NAME"
+          echo "Host: $VDB_HOST"
+          echo "SelfService Container / Branch: $CI_COMMIT_REF_SLUG"
+          echo "Latest bookmark: $CI_COMMIT_SHA"

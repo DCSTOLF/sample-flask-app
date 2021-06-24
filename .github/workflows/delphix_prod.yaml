@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Prod
 
 # Controls when the workflow will run
 on:
@@ -37,7 +37,10 @@ jobs:
           mkdir /config
           echo $DXTOOLS_CONF | base64 -d > /config/dxtools.conf
 
-
+      - name: Test connection to Delphix
+        run: |
+          dx_get_users > /dev/null
+          
       - name: Snapsync every dSource in DELPHIX_DSOURCE_LIST
         run: |
           for i in $(echo ${DELPHIX_DSOURCE_LIST}  | sed "s/,/ /g"); do
