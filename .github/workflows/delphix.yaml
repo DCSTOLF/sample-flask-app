@@ -33,5 +33,6 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: List Delphix Users
         run: |
+          mkdir /config
           echo $DXTOOLS_CONF | base64 -d > /config/dxtools.conf
           dx_get_users
