@@ -74,7 +74,7 @@ jobs:
           echo "Creating Environment from dSource: $DELPHIX_DSOURCE_NAME"
           
           # Create a new VDB for the Git Branch
-          # The group "${APP_PREFIX_UPPER}-VDBS" must be previously created on Delphix admin page, or it will fail
+          # The group "${DELPHIX_VDB_GROUP}" must be previously created on Delphix admin page, or it will fail
           if  ! ( dx_get_db_env -name $VDB_NAME -group DELPHIX_VDB_GROUP -type vdb > /dev/null ); then
             echo "Creating database $VDB_NAME"
             dx_provision_vdb -type oracle -srcgroup ${DELPHIX_DSOURCE_GROUP} -sourcename ${DELPHIX_DSOURCE_NAME} \
@@ -89,9 +89,9 @@ jobs:
           # And create a (Delphix container's) "branch", naming it after Github's GITHUB_REF
           if ! ( dx_get_js_containers -container_name ${GITHUB_REF} > /dev/null); then
             echo "Creating container ${GITHUB_REF} for VDB $VDB_NAME"
-             dx_ctl_js_container -action create -container_name ${GITHUB_REF} -container_def ${APP_PREFIX_UPPER},${VDB_NAME} -container_owner ${DELPHIX_CONTAINER_OWNER} -template_name $APP_PREFIX_UPPER
+             dx_ctl_js_container -action create -container_name ${GITHUB_REF} -container_def ${DELPHIX_VDB_GROUP},${VDB_NAME} -container_owner ${DELPHIX_CONTAINER_OWNER} -template_name $APP_PREFIX_UPPER
             echo "Creating branch ${GITHUB_REF}"
-             dx_ctl_js_branch -action create -container_name${GITHUB_REF} -branch_name ${GITHUB_REF}
+             dx_ctl_js_branch -action create -container_name ${GITHUB_REF} -branch_name ${GITHUB_REF}
           else
             echo "Container already exists."
              dx_ctl_js_container -action enable -container_name ${GITHUB_REF} || echo "Container is online"
