@@ -4,6 +4,13 @@ name: Turn-Off-Non-Prod
 
 # Controls when the workflow will run
 on:
+  # Triggers the workflow when a branch is deleted
+  delete:
+    branches:
+      - '*'         # matches every branch that doesn't contain a '/'
+      - '*/*'       # matches every branch containing a single '/'
+      - '**'        # matches every branch
+      - '!main'     # excludes main
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
       branches:
