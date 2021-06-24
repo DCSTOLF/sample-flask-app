@@ -37,8 +37,6 @@ jobs:
       DXTOOLS_CONF: ${{ secrets.DXTOOLS_CONF }}
       DELPHIX_DSOURCE_LIST: ${{ secrets.DELPHIX_DSOURCE_LIST }}
       CI_ROLLBACK: ${{ secrets.CI_ROLLBACK }}
-      GITHUB_REF: ${{ GITHUB_REF }}
-      GITHUB_RUN_ID: ${{ GITHUB_RUN_ID }}
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     container: delphix/dxtoolkit:latest
@@ -57,6 +55,8 @@ jobs:
       - name: Test connection to Delphix
         run: |
           dx_get_users > /dev/null
+          echo GITHUB_REF: ${GITHUB_REF}
+          echo GITHUB_RUN_ID: ${GITHUB_RUN_ID}
 
       - name: Create VDB and Self Service Container
         run: |
