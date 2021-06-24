@@ -60,7 +60,8 @@ jobs:
 
       - name: Create VDB and Self Service Container
         run: |
-          APP_PREFIX_UPPER=${APP_PREFIX^^}
+          APP_PREFIX_UPPER=$(echo $APP_PREFIX | tr '[a-z]' '[A-Z]')
+          echo APP_PREFIX: $APP_PREFIX_UPPER
           TEMP=$(echo ${GITHUB_REF} | rev | cut -d/ -f1 | rev | sed 's/-/_/g')
           VDB_NAME=v$(echo ${TEMP:0:7}) 
           DELPHIX_DSOURCE_GROUP=$(echo ${DELPHIX_DSOURCE_LIST} | cut -d : -f 1)
