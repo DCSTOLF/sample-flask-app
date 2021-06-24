@@ -104,7 +104,7 @@ jobs:
              dx_ctl_js_bookmarks -action create -container_name $GITHUB_REF -bookmark_name $GITHUB_RUN_ID -template_name ${APP_PREFIX_UPPER} -bookmark_time latest
           else
             echo "Current commit already bookmarked"
-            if [[ "$CI_ROLLBACK" == "true" ]]; then 
+            if [[ ${CI_ROLLBACK} -eq 1 ]]; then 
           	echo "CI_ROLLBACK environment variable is true, rolling back to bookmark $GITHUB_RUN_ID"
                   dx_ctl_js_container -action restore -timestamp $GITHUB_RUN_ID -container_name $GITHUB_REF
             else 
