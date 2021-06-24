@@ -62,8 +62,9 @@ jobs:
         run: |
           APP_PREFIX_UPPER=$(echo $APP_PREFIX | tr '[a-z]' '[A-Z]')
           echo APP_PREFIX: $APP_PREFIX_UPPER
-          echo GITHUB_REF: $GITHUB_REF
           TEMP=$(echo ${GITHUB_REF} | rev | cut -d/ -f1 | rev | sed 's/-/_/g')
+          BRANCH_NAME=$TEMP
+          echo BRANCH_NAME: $BRANCH_NAME
           VDB_NAME=v$(echo ${TEMP} | cut -c1-7 ) 
           DELPHIX_DSOURCE_GROUP=$(echo ${DELPHIX_DSOURCE_LIST} | cut -d : -f 1)
           DELPHIX_DSOURCE_NAME=$(echo ${DELPHIX_DSOURCE_LIST} | cut -d : -f 2)
@@ -87,26 +88,26 @@ jobs:
 
           # Creates a new Container on SelfService, with the VDB we created earlier. 
           # And create a (Delphix container's) "branch", naming it after Github's GITHUB_REF
-          if ! ( dx_get_js_containers -container_name ${GITHUB_REF} > /dev/null); then
-            echo "Creating container ${GITHUB_REF} for VDB $VDB_NAME"
-             dx_ctl_js_container -action create -dontrefresh -container_name ${GITHUB_REF} \
+          if ! ( dx_get_js_containers -container_name ${BRANCH_NAME} > /dev/null); then
+            echo "Creating container ${BRANCH_NAME} for VDB $VDB_NAME"
+             dx_ctl_js_container -action create -dontrefresh -container_name ${BRANCH_NAME} \
                -container_def ${DELPHIX_VDB_GROUP},${VDB_NAME} -container_owner ${DELPHIX_CONTAINER_OWNER} \
                -template_name $APP_PREFIX_UPPER
-            echo "Creating branch ${GITHUB_REF}"
-            dx_ctl_js_branch -action create -container_name ${GITHUB_REF} -branch_name ${GITHUB_REF}
+            echo "Creating branch ${BRANCH_NAME}"
+            dx_ctl_js_branch -action create -container_name ${BRANCH_NAME} -branch_name ${BRANCH_NAME}
           else
             echo "Container already exists."
-            dx_ctl_js_container -action enable -container_name ${GITHUB_REF} || echo "Container is online"
+            dx_ctl_js_container -action enable -container_name ${BRANCH_NAME} || echo "Container is online"
           fi
 
           # Create a bookmark for current GITHUB_RUN_ID - if it doesn't exist, then create it
-          if ! ( dx_get_js_bookmarks -template_name ${APP_PREFIX_UPPER} -container_name $GITHUB_REF -bookmark_name $GITHUB_RUN_ID > /dev/null); then
-             dx_ctl_js_bookmarks -action create -container_name $GITHUB_REF -bookmark_name $GITHUB_RUN_ID -template_name ${APP_PREFIX_UPPER} -bookmark_time latest
+          if ! ( dx_get_js_bookmarks -template_name ${APP_PREFIX_UPPER} -container_name $BRANCH_NAME -bookmark_name $GITHUB_RUN_ID > /dev/null); then
+             dx_ctl_js_bookmarks -action create -container_name $BRANCH_NAME -bookmark_name $GITHUB_RUN_ID -template_name ${APP_PREFIX_UPPER} -bookmark_time latest
           else
             echo "Current commit already bookmarked"
             if [[ ${CI_ROLLBACK} -eq 1 ]]; then 
           	echo "CI_ROLLBACK environment variable is true, rolling back to bookmark $GITHUB_RUN_ID"
-                  dx_ctl_js_container -action restore -timestamp $GITHUB_RUN_ID -container_name $GITHUB_REF
+                  dx_ctl_js_container -action restore -timestamp $GITHUB_RUN_ID -container_name $BRANCH_NAME
             else 
           	echo "CI_ROLLBACK environment variable is false, nothing to do."
             fi
@@ -114,5 +115,5 @@ jobs:
           echo "Database provisioning finished:"
           echo "Database: $VDB_NAME"
           echo "Host: $DELPHIX_TARGET_ENVIRONMENT"
-          echo "SelfService Container / Branch: $GITHUB_REF"
+          echo "SelfService Container / Branch: $BRANCH_NAME"
           echo "Latest bookmark: $GITHUB_RUN_ID"
