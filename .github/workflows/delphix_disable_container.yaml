@@ -24,6 +24,7 @@ on:
 jobs:
   # This workflow contains a job to manage VDB and SelfService container life-cycle
   disable_delphix_container:
+    if: github.event.ref_type == 'branch'
     environment:
       name: delphix-engine
     env:
@@ -54,17 +55,17 @@ jobs:
       - name: Test connection to Delphix
         run: |
           dx_get_users > /dev/null
-          echo GITHUB_REF: ${GITHUB_REF}
+          echo GITHUB_REF: ${{ github.event.ref }}
           echo GITHUB_RUN_ID: ${GITHUB_RUN_ID}
 
       - name: Disable Self Service Container
         run: |
           APP_PREFIX_UPPER=$(echo $APP_PREFIX | tr '[a-z]' '[A-Z]')
           echo APP_PREFIX: $APP_PREFIX_UPPER
-          echo GITHUB_REF: $GITHUB_REF
+          echo GITHUB_REF: ${{ github.event.ref }}
           TEMP=$(echo ${GITHUB_REF} | rev | cut -d/ -f1 | rev | sed 's/-/_/g')
           VDB_NAME=v$(echo ${TEMP} | cut -c1-7 ) 
           DELPHIX_DSOURCE_GROUP=$(echo ${DELPHIX_DSOURCE_LIST} | cut -d : -f 1)
           DELPHIX_DSOURCE_NAME=$(echo ${DELPHIX_DSOURCE_LIST} | cut -d : -f 2)
           
-          dx_ctl_js_container -action disable -container_name $GITHUB_REF
+          dx_ctl_js_container -action disable -container_name ${{ github.event.ref }}
