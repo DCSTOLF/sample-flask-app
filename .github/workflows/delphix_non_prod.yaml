@@ -75,7 +75,7 @@ jobs:
           
           # Create a new VDB for the Git Branch
           # The group "${DELPHIX_VDB_GROUP}" must be previously created on Delphix admin page, or it will fail
-          if  ! ( dx_get_db_env -name $VDB_NAME -group DELPHIX_VDB_GROUP -type vdb > /dev/null ); then
+          if  ! ( dx_get_db_env -name $VDB_NAME -group $DELPHIX_VDB_GROUP -type vdb > /dev/null ); then
             echo "Creating database $VDB_NAME"
             dx_provision_vdb -type oracle -srcgroup ${DELPHIX_DSOURCE_GROUP} -sourcename ${DELPHIX_DSOURCE_NAME} \
             -group ${DELPHIX_VDB_GROUP} -targetname ${VDB_NAME} -dbname ${VDB_NAME} \
