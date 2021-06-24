@@ -101,7 +101,7 @@ jobs:
           fi
 
           # Create a bookmark for current GITHUB_RUN_ID - if it doesn't exist, then create it
-          if ! ( dx_get_js_bookmarks -template_name ${APP_PREFIX_UPPER} -container_name $BRANCH_NAME -bookmark_name $GITHUB_RUN_ID > /dev/null); then
+          if ( dx_get_js_bookmarks -template_name ${APP_PREFIX_UPPER} -container_name $BRANCH_NAME -bookmark_name $GITHUB_RUN_ID > /dev/null); then
              dx_ctl_js_bookmarks -action create -container_name $BRANCH_NAME -bookmark_name $GITHUB_RUN_ID -template_name ${APP_PREFIX_UPPER} -bookmark_time latest
           else
             echo "Current commit already bookmarked"
