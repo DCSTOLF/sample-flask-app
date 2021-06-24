@@ -36,9 +36,6 @@ jobs:
         run: |
           mkdir /config
           echo $DXTOOLS_CONF | base64 -d > /config/dxtools.conf
-
-      - name: Snapsync every dSource in DELPHIX_DSOURCE_LIST
-        run: |
           for i in $(echo ${DELPHIX_DSOURCE_LIST}  | sed "s/,/ /g"); do
 	  	DSOURCE_GROUP=$(echo $i | cut -d : -f 1)
 	  	DSOURCE_NAME=$(echo $i | cut -d : -f 2)
