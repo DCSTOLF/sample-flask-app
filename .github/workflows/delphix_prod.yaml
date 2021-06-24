@@ -15,22 +15,32 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  # This workflow contains a job to snapsync dSources when there's a change on the main branch"
+  snapsync_dsources:
+    environment:
+      name: delphix-engine
+    env:
+      DXTOOLS_CONF: ${{ secrets.DXTOOLS_CONF }}
+      DELPHIX_DSOURCE_LIST: ${{ secretes.DELPHIX_DSOURCE_LIST }}
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    container: delphix/dxtoolkit:latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
       # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Set dxtools.conf
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          mkdir /config
+          echo $DXTOOLS_CONF | base64 -d > /config/dxtools.conf
+
+      - name: Snapsync every dSource in DELPHIX_DSOURCE_LIST
+        run: |
+          for i in $(echo ${DELPHIX_DSOURCE_LIST}  | sed "s/,/ /g"); do
+	  DSOURCE_GROUP=$(echo $i | cut -d : -f 1)
+	  DSOURCE_NAME=$(echo $i | cut -d : -f 2)
+	  dx_snapshot_db -group ${DSOURCE_GROUP} -name ${DSOURCE_NAME}
+          done
