@@ -113,6 +113,6 @@ jobs:
           fi
           echo "Database provisioning finished:"
           echo "Database: $VDB_NAME"
-          echo "Host: $VDB_HOST"
-          echo "SelfService Container / Branch: $CI_COMMIT_REF_SLUG"
-          echo "Latest bookmark: $CI_COMMIT_SHA"
+          echo "Host: $DELPHIX_TARGET_ENVIRONMENT"
+          echo "SelfService Container / Branch: $GITHUB_REF"
+          echo "Latest bookmark: $GITHUB_RUN_ID"
