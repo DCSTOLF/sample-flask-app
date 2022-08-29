@@ -94,7 +94,6 @@ jobs:
                -container_def ${DELPHIX_VDB_GROUP},${VDB_NAME} -container_owner ${DELPHIX_CONTAINER_OWNER} \
                -template_name $APP_PREFIX_UPPER
             echo "Creating branch ${BRANCH_NAME}"
-            dx_ctl_js_branch -action create -container_name ${BRANCH_NAME} -branch_name ${BRANCH_NAME}
           else
             echo "Container already exists."
             dx_ctl_js_container -action enable -container_name ${BRANCH_NAME} || echo "Container is online"
